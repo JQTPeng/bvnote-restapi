@@ -11,7 +11,7 @@ var config = new ConfigurationBuilder()
 
 var builder = WebApplication.CreateSlimBuilder(args);
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSignalR();
+builder.Services.AddSignalR().AddJsonProtocol(opts => { opts.PayloadSerializerOptions.PropertyNamingPolicy = null; });
 builder.Services.AddScoped<IBibleDb>(sp => new BibleDb(config.GetConnectionString("BibleDb"), sp.GetRequiredService<ILogger<BibleDb>>()));
 builder.Services.AddOpenApi();
 builder.Services.AddOutputCache(options =>
@@ -19,11 +19,18 @@ builder.Services.AddOutputCache(options =>
     options.AddBasePolicy(builder =>
         builder.Expire(TimeSpan.FromSeconds(15)));
 });
-builder.Services.AddCors(opts =>
+builder.Services.AddCors(options =>
 {
-    opts.AddPolicy("BlazorChatExample", policy =>
+    options.AddPolicy("origin_BlazorChatExample", policy =>
     {
-        policy.WithOrigins("http://localhost:5206")
+        var blazor_chat_origins = new[]
+        {
+            "https://webcammeeting-fc489.web.app/",
+            "https://webcammeeting-fc489.firebaseapp.com/",
+            "http://localhost:5206"
+        };
+
+        policy.WithOrigins(blazor_chat_origins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -51,9 +58,9 @@ app.UseCors();
 
 app.MapGroup("/api/v1")
     .MapBible();
-    
+
 app.MapHub<ChatHub>("/api/v1/chatHub")
-    .RequireCors("BlazorChatExample");
+    .RequireCors("origin_BlazorChatExample");
 
 app.MapOpenApi();
 app.MapScalarApiReference();
